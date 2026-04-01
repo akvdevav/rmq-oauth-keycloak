@@ -2,6 +2,7 @@
 
 Intructions to setup and test RabbitMQ with Keycloak Oauth setup.
 
+### Create certs for keycloak
 ```
 openssl req -newkey rsa:2048 -nodes \
   -keyout keycloak.key \
@@ -14,6 +15,7 @@ openssl req -newkey rsa:2048 -nodes \
 chmod 777 keycloak.key keycloak.crt
 ```
 
+### Run keycloak in Docker (Colima)
 ```
 docker run --platform linux/arm64 -p 8080:8080 -p 8443:8443 \
   -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
@@ -25,19 +27,20 @@ docker run --platform linux/arm64 -p 8080:8080 -p 8443:8443 \
   --https-certificate-key-file=/opt/keycloak/server.key
 ```
 
-
-````
+### Generating Token (Clients must exists in Keycloak)
+```
 export TOKEN=$(curl -s -k -X POST https://10.0.0.173:8443/realms/master/protocol/openid-connect/token \
   -d "grant_type=client_credentials" \
   -d "client_id=arul" \
   -d "client_secret=xxxxxxxxxxx" | grep -o '"access_token"\s*:\s*"[^"]*"' | awk -F'"' '{print $4}')
 
 ```
-
+### Reveiw Token (jwt.io)
 ```
 echo $TOKEN
 ```
 
+### Test Token with RabbitMQ server
 ```
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:15673/api/whoami
 HTTP/1.1 200 OK
