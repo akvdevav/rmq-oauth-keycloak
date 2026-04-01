@@ -1,9 +1,9 @@
-Keycloak OAuth2 Configuration for RabbitMQ
+# Keycloak OAuth2 Configuration for RabbitMQ
 This guide details how to configure Keycloak as an OAuth 2.0 provider for RabbitMQ. It uses the Client Credentials flow (machine-to-machine) and leverages Keycloak's Realm Roles to pass RabbitMQ tags (Management UI access) and AMQP scopes (Queue/Message access) directly into the token payload.
 
 Note: This exact concept—creating custom roles and assigning them to a service principal—maps 1:1 with how Azure Entra ID (App Roles) works!
 
-Step 1: Create the RabbitMQ Client
+- Step 1: Create the RabbitMQ Client
 First, we need to create the application representation (Client) in Keycloak.
 
 Log in to the Keycloak Admin Console.
@@ -14,7 +14,7 @@ In the left-hand navigation menu, click on Clients.
 
 Click the Create client button.
 
-General Settings:
+- General Settings:
 
 Client type: OpenID Connect
 
@@ -36,7 +36,7 @@ Click Save.
 
 Go to the Credentials tab of your new client and copy the Client secret. You will need this for your scripts.
 
-Step 2: Create the RabbitMQ Realm Roles
+- Step 2: Create the RabbitMQ Realm Roles
 RabbitMQ expects specific string formats for its permissions. We will create these as Keycloak Realm Roles so they are automatically injected into the realm_access.roles array of the JWT.
 
 In the left-hand navigation menu, click on Realm Roles.
@@ -53,7 +53,7 @@ rabbitmq.write:*/* (Grants AMQP permission to publish messages on any vhost)
 
 rabbitmq.read:*/* (Grants AMQP permission to consume messages on any vhost)
 
-Step 3: Assign Roles to the Client's Service Account
+-   Step 3: Assign Roles to the Client's Service Account
 Now we must link the permissions to the client we created in Step 1.
 
 In the left-hand navigation menu, click on Clients.
