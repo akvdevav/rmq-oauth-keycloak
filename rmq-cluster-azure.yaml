@@ -1,0 +1,36 @@
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: rabbitmq-oauth-test
+  namespace: rabbitmq-system
+spec:
+  replicas: 1
+  imagePullSecrets:
+    - name: tanzu-rabbitmq-registry-creds
+  rabbitmq:
+    additionalPlugins:
+      - rabbitmq_auth_backend_oauth2
+      - rabbitmq_management
+    additionalConfig: |
+      auth_backends.1 = rabbit_auth_backend_oauth2
+      auth_backends.2 = internal
+
+      # 1. Keeps the 'aud' check happy
+      auth_oauth2.resource_server_id = account
+
+      # 2. Look in Keycloak roles
+      auth_oauth2.additional_scopes_key = realm_access.roles
+
+      # 3. FORCE the prefix to be 'rabbitmq.' regardless of resource_server_id
+      auth_oauth2.scope_prefix = rabbitmq.
+
+      auth_oauth2.preferred_username_claims.1 = client_id
+      auth_oauth2.issuer = https://10.0.0.173:8443/realms/master
+      auth_oauth2.jwks_uri = https://10.0.0.173:8443/realms/master/protocol/openid-connect/certs
+      auth_oauth2.verify_aud = false
+      auth_oauth2.https.peer_verification = verify_none
+
+      # 4. Map our "Simulation Role" to the prefixed version RabbitMQ expects
+      auth_oauth2.scope_aliases.az_group_admin = rabbitmq.tag:administrator rabbitmq.configure:*/* rabbitmq.read:*/* rabbitmq.write:*/*
+
+      log.console.level = debug
