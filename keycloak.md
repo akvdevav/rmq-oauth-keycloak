@@ -82,15 +82,17 @@ You can now generate a token and verify that Keycloak is formatting the payload 
 1. Fetch the Token (Bash)
 Use the Client Credentials grant to fetch a token. Replace YOUR_IP and YOUR_SECRET with your actual values.
 
-Bash
+```
 export TOKEN=$(curl -s -k -X POST https://YOUR_IP:8443/realms/master/protocol/openid-connect/token \
   -d "grant_type=client_credentials" \
   -d "client_id=rmq-test" \
   -d "client_secret=YOUR_SECRET" | grep -o '"access_token"\s*:\s*"[^"]*"' | awk -F'"' '{print $4}')
+```
+
 2. Decode and Inspect
 If you decode the $TOKEN (e.g., using jwt.io or a local script), you must see all four roles sitting inside the realm_access block:
 
-JSON
+```
 "realm_access": {
   "roles": [
     "default-roles-master",
@@ -100,18 +102,23 @@ JSON
     "rabbitmq.read:*/*"
   ]
 }
+```
+
 3. Test the HTTP API
 If the rabbitmq.tag:administrator role is present, this curl command will return a 200 OK:
 
-Bash
+```
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:15673/api/whoami
+```
+
 4. Test AMQP (Python)
+
 If the configure, write, and read roles are present, your Python pika client will successfully authenticate:
 
-Python
-import pika
+
 
 # RabbitMQ OAuth2 uses the token as the password with a blank username
+
 ```
 credentials = pika.PlainCredentials('', 'YOUR_OAUTH_TOKEN_STRING')
 parameters = pika.ConnectionParameters(host='localhost', port=5672, virtual_host='/', credentials=credentials)
