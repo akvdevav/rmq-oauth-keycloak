@@ -7,8 +7,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- 1. CONFIGURATION ---
 KEYCLOAK_URL = "https://10.0.0.173:8443/realms/master/protocol/openid-connect/token"
-CLIENT_ID = "rmq-test"
-CLIENT_SECRET = "IfDOEPpO7FsKtjurO19cSeuvbwB2lKs9"
+CLIENT_ID = "test"
+CLIENT_SECRET = "xwUqnONaBUWGCGQC5pbqlgnkW2amKWAg"
 RABBITMQ_HOST = "localhost"
 RABBITMQ_PORT = 5672
 QUEUE_NAME = "oauth2_test_queue"
@@ -73,8 +73,8 @@ else:
     print("   [Failed] No message returned.\n")
 
 
-# --- 5. CLEAN UP ---
-print("6. Cleaning up...")
-channel.queue_delete(queue=QUEUE_NAME)
+# # --- 5. CLEAN UP ---
+# print("6. Cleaning up...")
+# channel.queue_delete(queue=QUEUE_NAME)
 connection.close()
 print("   [Success] Connection closed. Test Complete!")
