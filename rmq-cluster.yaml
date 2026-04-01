@@ -1,0 +1,69 @@
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: rabbitmq-oauth-test
+  namespace: rabbitmq-system
+spec:
+  replicas: 1
+  imagePullSecrets:
+    - name: tanzu-rabbitmq-registry-creds
+  rabbitmq:
+    additionalPlugins:
+      - rabbitmq_auth_backend_oauth2
+      - rabbitmq_management
+    additionalConfig: |
+      # auth_backends.1 = rabbit_auth_backend_oauth2
+      # auth_backends.2 = internal
+      #
+      # # 1. This passes the Audience check (your token has "broker" in the aud array)
+      # auth_oauth2.resource_server_id = broker
+      #
+      # # 2. Network settings
+      # auth_oauth2.issuer = https://10.0.0.173:8443/realms/master
+      # auth_oauth2.jwks_uri = https://10.0.0.173:8443/realms/master/protocol/openid-connect/certs
+      # auth_oauth2.verify_aud = false
+      # auth_oauth2.https.peer_verification = verify_none
+      # auth_oauth2.preferred_username_claims.1 = client_id
+      #
+      # # 3. Tell RabbitMQ to pull roles from the realm level
+      # auth_oauth2.additional_scopes_key = realm_access.roles
+      #
+      # # 4. Map the safe "offline_access" role to the official RabbitMQ tags
+      # auth_oauth2.scope_aliases.developer = rabbitmq.tag:administrator rabbitmq.configure:*/* rabbitmq.read:*/* rabbitmq.write:*/*
+
+      # auth_backends.1 = rabbit_auth_backend_oauth2
+      # auth_backends.2 = internal
+      #
+      # # Match the 'aud' claim in your new token
+      # auth_oauth2.resource_server_id = account
+      #
+      # auth_oauth2.preferred_username_claims.1 = client_id
+      # auth_oauth2.issuer = https://10.0.0.173:8443/realms/master
+      # auth_oauth2.jwks_uri = https://10.0.0.173:8443/realms/master/protocol/openid-connect/certs
+      #
+      # auth_oauth2.verify_aud = false
+      # auth_oauth2.https.peer_verification = verify_none
+      #
+      # log.console.level = debug
+
+      auth_backends.1 = rabbit_auth_backend_oauth2
+      auth_backends.2 = internal
+
+      # 1. Matches the 'aud' claim so the token isn't rejected
+      auth_oauth2.resource_server_id = account
+
+      # 2. THE MISSING LINK: Force the prefix to be 'rabbitmq.'
+      # Without this, RabbitMQ expects 'account.tag:administrator'
+      auth_oauth2.scope_prefix = rabbitmq.
+
+      # 3. Tell RabbitMQ to look in the Keycloak roles array
+      auth_oauth2.additional_scopes_key = realm_access.roles
+
+      auth_oauth2.preferred_username_claims.1 = client_id
+      auth_oauth2.issuer = https://10.0.0.173:8443/realms/master
+      auth_oauth2.jwks_uri = https://10.0.0.173:8443/realms/master/protocol/openid-connect/certs
+
+      auth_oauth2.verify_aud = false
+      auth_oauth2.https.peer_verification = verify_none
+
+      log.console.level = debug

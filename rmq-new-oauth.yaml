@@ -1,0 +1,39 @@
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: rabbitmq-oauth-new
+  namespace: rabbitmq-system
+spec:
+  replicas: 1
+  imagePullSecrets:
+    - name: tanzu-rabbitmq-registry-creds
+  rabbitmq:
+    additionalPlugins:
+      - rabbitmq_auth_backend_oauth2
+      - rabbitmq_management
+    additionalConfig: |
+          auth_backends.1 = rabbitmq_auth_backend_oauth2
+          auth_backends.2 = internal
+
+          # 1. Resource Server ID (Must match the "aud" in the customer token)
+          auth_oauth2.resource_server_id = https://management.azure.com
+
+          # 2. Key Discovery (Pointing to your Mac IP)
+          auth_oauth2.jwks_url = http://10.0.0.173:8080/.well-known/openid-configuration/jwks
+
+          # 3. Issuer (Must match the "iss" in the customer token example)
+          auth_oauth2.issuer = https://sts.windows.net/<tenantId>/
+
+          # 4. Relaxed Validation for local testing
+          auth_oauth2.verify_aud = false
+          auth_oauth2.https.peer_verification = verify_none
+
+          # 5. THE CRITICAL MAPPING
+          # This tells RabbitMQ: "Look into the 'groups' field for permissions"
+          auth_oauth2.additional_scopes_key = groups
+
+          # 6. Map the Specific Azure Group UUID to RabbitMQ Permissions
+          # Syntax: auth_oauth2.scope_aliases.<GROUP_UUID> = <PERMISSIONS>
+          auth_oauth2.scope_aliases.2b26c806-c9d0-4b4d-979f-fb97e1a716f0 = rabbitmq.tag:administrator rabbitmq.configure:*/* rabbitmq.read:*/* rabbitmq.write:*/*
+
+          log.console.level = debug
