@@ -25,3 +25,30 @@ docker run --platform linux/arm64 -p 8080:8080 -p 8443:8443 \
 ```
 
 
+````
+export TOKEN=$(curl -s -k -X POST https://10.0.0.173:8443/realms/master/protocol/openid-connect/token \
+  -d "grant_type=client_credentials" \
+  -d "client_id=arul" \
+  -d "client_secret=xxxxxxxxxxx" | grep -o '"access_token"\s*:\s*"[^"]*"' | awk -F'"' '{print $4}')
+
+```
+
+```
+echo $TOKEN
+```
+
+```
+curl -i -H "Authorization: Bearer $TOKEN" http://localhost:15673/api/whoami
+HTTP/1.1 200 OK
+allow: HEAD, GET, OPTIONS
+cache-control: no-cache
+content-length: 65
+content-security-policy: script-src 'self' 'unsafe-eval' 'unsafe-inline'; object-src 'self'
+content-type: application/json
+date: Wed, 01 Apr 2026 13:21:56 GMT
+server: Cowboy
+vary: accept, accept-encoding, origin
+
+{"name":"arul","tags":["administrator"],"is_internal_user":false}%
+
+```
