@@ -1,5 +1,6 @@
 # rmq-oauth-keycloak
 
+Intructions to setup and test RabbitMQ with Keycloak Oauth setup.
 
 ```
 openssl req -newkey rsa:2048 -nodes \
