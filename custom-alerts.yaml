@@ -1,0 +1,120 @@
+serverFiles:
+  alerts:
+    groups:
+      # ==========================================
+      # 1. INFRASTRUCTURE & NODE ALERTS
+      # ==========================================
+      - name: rabbitmq-node-alerts
+        rules:
+        - alert: RabbitMQNodeDown
+          expr: up{job=~".*rabbit.*"} == 0
+          for: 1m
+          labels:
+            severity: critical
+            channel: gchat
+          annotations:
+            summary: "RabbitMQ node is down"
+            description: "Node {{ $labels.instance }} has been down for 2 minutes."
+
+        - alert: RabbitMQNetworkPartition
+          expr: rabbitmq_partitions > 0
+          for: 1m
+          labels:
+            severity: critical
+            channel: gchat
+          annotations:
+            summary: "RabbitMQ cluster network partition detected"
+            description: "A network split has occurred on {{ $labels.instance }}. Nodes cannot communicate, risking data loss."
+
+        - alert: RabbitMQMemoryHigh
+          expr: rabbitmq_memory_used_bytes / rabbitmq_memory_limit_bytes * 100 > 50
+          for: 5m
+          labels:
+            severity: warning
+            channel: gchat
+          annotations:
+            summary: "RabbitMQ memory usage is above 50%"
+            description: "Node {{ $labels.instance }} is close to its memory limit. Publishers may be blocked soon."
+
+      # ==========================================
+      # 2. QUEUE & MESSAGE ALERTS
+      # ==========================================
+      - name: rabbitmq-queue-alerts
+        rules:
+        # Your custom 10k Depth Alert
+        - alert: RabbitMQHighQueueDepth
+          expr: |
+            sum by (namespace, rabbitmq_cluster) (
+              rabbitmq_queue_messages_ready * on(instance, job) group_left(rabbitmq_cluster) rabbitmq_identity_info
+            ) > 10000
+          for: 10m
+          labels:
+            severity: critical
+            channel: gchat
+          annotations:
+            summary: "High message count in RabbitMQ cluster"
+            description: "Cluster {{ $labels.rabbitmq_cluster }} has > 10k messages ready for 10 minutes."
+
+        # NEW: Queue Leak Detection (Too many queues)
+        - alert: RabbitMQQueueLeak
+          # Adjust the '1000' threshold based on what is normal for your apps
+          expr: count by (namespace, rabbitmq_cluster) (rabbitmq_queue_messages) > 1000
+          for: 15m
+          labels:
+            severity: warning
+            channel: gchat
+          annotations:
+            summary: "Possible queue leak detected"
+            description: "Cluster {{ $labels.rabbitmq_cluster }} has over 1,000 active queues. Apps may be creating temporary queues and failing to delete them."
+
+        # NEW: Dropped / Unroutable Messages
+        - alert: RabbitMQMessagesDropped
+          # Fires if messages hit an exchange but no queue routing key matches them
+          expr: increase(rabbitmq_channel_messages_unroutable_dropped_total[5m]) > 0
+          for: 2m
+          labels:
+            severity: warning
+            channel: gchat
+          annotations:
+            summary: "RabbitMQ is dropping unroutable messages"
+            description: "Messages are being permanently dropped on {{ $labels.instance }}. Check application exchange bindings."
+
+        # NEW: Un-ACKed Messages (Consumers are stuck)
+        - alert: RabbitMQStuckConsumers
+          # Messages delivered to apps, but apps haven't sent an ACK back
+          expr: sum by (queue, rabbitmq_cluster) (rabbitmq_queue_messages_unacked) > 500
+          for: 5m
+          labels:
+            severity: critical
+            channel: gchat
+          annotations:
+            summary: "High number of unacknowledged messages"
+            description: "Queue '{{ $labels.queue }}' has > 500 unacked messages. Consumers are likely hung, deadlocked, or processing extremely slowly."
+
+        # NEW: Orphaned Queues (Messages piling up with NO consumers)
+        - alert: RabbitMQOrphanedQueue
+          expr: rabbitmq_queue_messages_ready > 100 and rabbitmq_queue_consumers == 0
+          for: 10m
+          labels:
+            severity: warning
+            channel: gchat
+          annotations:
+            summary: "Queue has messages but no active consumers"
+            description: "Queue '{{ $labels.queue }}' has messages waiting, but 0 consumer applications are connected to process them."
+
+      # ==========================================
+      # 3. CONNECTION ALERTS
+      # ==========================================
+      - name: rabbitmq-connection-alerts
+        rules:
+        # NEW: High Connection Churn
+        - alert: RabbitMQHighConnectionChurn
+          # High rate of closing connections usually means an app is crash-looping or not pooling connections
+          expr: rate(rabbitmq_connections_closed_total[5m]) > 20
+          for: 5m
+          labels:
+            severity: warning
+            channel: gchat
+          annotations:
+            summary: "High connection churn in RabbitMQ"
+            description: "Apps are opening and closing connections rapidly on {{ $labels.instance }}. This destroys RabbitMQ CPU performance."
